@@ -1,0 +1,20 @@
+{
+  "name": "koishi-plugin-pictures-time",
+  "description": "图图时间！触发后自动将群u发的图片保存至本地",
+  "version": "1.0.0-rc",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin"
+  ],
+  "peerDependencies": {
+    "koishi": "^4.15.0"
+  }
+}
