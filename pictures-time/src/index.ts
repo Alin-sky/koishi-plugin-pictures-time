@@ -4,11 +4,10 @@ import path from 'path';
 
 export const name = 'pictures-time'
 
-export const usage = '## 使用指令“pictime”或“图图time”来记录指令调用者发的图图\n'+
-"### 启用后发送“over”或“停止”来终止记录图图\n"+
-"### 只测试了gocq和windows（笨懒阿林）\n"+
-"安装后即可启用，路径缺省时将会在data文件夹内新建image-time文件夹来存储\n"+
-"### [问题反馈](https://github.com/Alin-sky/koishi-plugin-pictures-time/issues)"
+export const usage = '## 使用指令“pictime”或“图图time”来记录指令调用者发的图图\n' +
+  "### 启用后发送“over”或“停止”来终止记录图图\n" +
+  "安装后即可启用，路径缺省时将会在data文件夹内新建image-time文件夹来存储\n" +
+  "### [问题反馈](https://github.com/Alin-sky/koishi-plugin-pictures-time/issues)"
 
 
 
@@ -115,79 +114,111 @@ export async function apply(ctx: Context, config: Config) {
     path1 = (path.join(__dirname, '../../../data/image-time'))
     createDir(path1)
   }
-  var uid: number
-  var gid: number
-  var usename
+  var uid = []
+  var gid: number = 0
+  var usename: string
   let i = 0
   let n = 0
   let e = 0
+  let o = 0
+  let over = ['over', '停止']
+  let userdata = []
+
   ctx.command('pictime', '图图时间')
     .alias('图图time')
-    .action(async ({ session }, ...args) => {
-      uid = Number(session.userId)
+    .action(async ({ session }) => {
+      i = 0
+      n = 0
+      e = 0
+      o = 0
       usename = (session.author).name
-      gid = Number(session.guild)
+      gid = Number(session.guildId)
+
 
       session.send(h('at', { id: session.userId }) + ' 开始记录啦')
+      uid.push(Number((session.author).id))
       const PICTIME = ctx.middleware(async (session, next) => {
         if (/image file/.test(session.content)
-          && uid == Number(session.userId)) {
-          for (let ii = 0; ii < 2; ii++) {
-            try {
-              await saveImage_pro(session.content,
-                (path1)).then(() => logger.info('下载成功'))
-              break
-            } catch (error) {
-              logger.info(error)
-              e++
+          && uid.includes(Number(session.userId))) {
+          n++
+          try {
+            await saveImage_pro(session.content,
+              (path1)).then(() => logger.info('下载成功'))
+          } catch (error) {
+            logger.info(error)
+            e++
+          }
+          userdata.push([session.userId, n])
+        } else if (over.includes(session.content)
+          && uid.includes(Number(session.userId))) {
+
+          for (let i = 0; i < userdata.length; i++) {
+            if (session.userId == userdata[i][0]) {
+              o = userdata[i][1]
             }
           }
-          n++
-        } if (session.content === 'over' || session.content == '停止') {
-          PICTIME()
+
+          uid = uid.filter(item => item !== Number(session.userId))
           //写库
+
+          usename = (session.author).name
           const data = await ctx.database.get('pictime', session.userId)
-          console.log(data)
-          data[0] == null ? i = n : i = n += (data[0].sum)
+
+          data[0] == null ? i = n : i = (n + (data[0].sum))
           await ctx.database.upsert('pictime', [
             {
               id: Number(session.userId),
               uname: usename,
               guildid: Number(session.guildId),
-              sum: i
+              sum: o
             },
-          ])
-          await session.send(`成功下载${n}张图图,\n${e}张图图下载出错`)
+          ],'guildid')
+          PICTIME()
+
+          return `成功下载${o}张图图,\n${e}张图图下载出错`
+        } else {
+          return next()
         }
-        return next()
-      })
+      }, true)
+
     })
 
   ctx.command('pictime.rankings')
     .action(async ({ session }, ...args) => {
+
       const data = await ctx.database.get('pictime', {})
       if (data[0] == null) {
         return '呜呜，数据库没有数据'
       }
-      let top: { tops: Number; uid: Number; unam: string }
+      let top: { tops: Number; uid: Number; guid: Number; unam: string }
       let array = []
       let messages = []
-      let uname
+      let o = 0
+
       for (let i = 0; i < data.length; i++) {
-        top = { tops: data[i].sum, uid: data[i].id ,unam:data[i].uname}
+        top = {
+          tops: data[i].sum,
+          uid: data[i].id,
+          guid: data[i].guildid,
+          unam: data[i].uname
+        }
         array.push(top)
       }
-      console.log(array.sort((a, b) => b.tops - a.tops))//排序
-      messages.push('发图数量排名：\n')
-      if (array.length >= 10) {
-        for (let i = 0; i < 10; i++) {
-          messages.push(`第${i+1}名\n${array[i].unam}—发图：${array[i].tops}张\n`)
+
+      array.sort((a, b) => b.tops - a.tops)//排序
+      messages.push('本群发图数量排名：\n')
+      for (let i = 0; i < array.length; i++) {
+        if (session.guildId == array[i].guid) {
+          o++
+          if (o >= 10) {
+            break
+          } else {
+            messages.push(`第${o}名:\n${array[i].unam}\n🖼️发图：${array[i].tops}张\n`)
+          }
         }
-      } else {
-        for (let i = 0; i < array.length; i++) {
-          messages.push(`第${i+1}名\n${array[i].unam}—发图：${array[i].tops}张\n`)
-        }
+
       }
+
       session.send(messages)
 
     })

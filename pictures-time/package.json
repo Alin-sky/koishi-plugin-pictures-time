@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-pictures-time",
-  "description": "图图时间！触发后自动将群u发的图片保存至本地",
-  "version": "1.0.0-rc",
+  "description": "图图时间！触发后将下载触发者发的图片至本地",
+  "version": "1.0.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
